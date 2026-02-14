@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TDCT Pricing Calculator - The Dream Clean Team</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useMemo } = React;
+
+    // Pricing data from the "Pricing Sheet" tab
+    const PRICING = {
+      laborOnly: 0.14,
+      laborWithOthers: 0.12,
+      bathroomSupplies: 1.73,
+      kitchenSupplies: 5.97,
+      bathroomLinensRental: 0.92,
+      bathroomLinensLaundry: 2.55,
+      bathTowelRental: 0.54,
+      bathTowelLaundry: 2.25,
+      kitchenLinensRental: 0.30,
+      kitchenLinensLaundry: 0.50,
+      beds: {
+        twin: { rental: 1.04, laundry: 3.00 },
+        full: { rental: 1.08, laundry: 4.00 },
+        queen: { rental: 1.28, laundry: 4.60 },
+        king: { rental: 1.38, laundry: 5.20 }
+      }
+    };
+
+    const COLORS = {
+      primary: '#50bde4',
+      secondary: '#1a2954'
+    };
+
+    function PricingCalculator() {
+      const [inputs, setInputs] = useState({
+        twin: 0,
+        full: 0,
+        queen: 0,
+        king: 0,
+        bathroom: 0,
+        kitchen: 1,
+        maxOccupancy: 0,
+        squareFoot: 0
+      });
+      
+      const [includeLinens, setIncludeLinens] = useState(true);
+
+      const handleInputChange = (field, value) => {
+        // Clean the value to remove leading zeros and ensure it's a valid number
+        const cleanValue = value === '' ? 0 : Math.max(0, parseInt(value, 10) || 0);
+        setInputs(prev => ({
+          ...prev,
+          [field]: cleanValue
+        }));
+      };
+
+      const calculations = useMemo(() => {
+        const { twin, full, queen, king, bathroom, kitchen, maxOccupancy, squareFoot } = inputs;
+        
+        const laborCharge = squareFoot * PRICING.laborWithOthers;
+        const bathroomSupplyCharge = bathroom * PRICING.bathroomSupplies;
+        const kitchenSupplyCharge = kitchen * PRICING.kitchenSupplies;
+        const supplyCharge = bathroomSupplyCharge + kitchenSupplyCharge;
+        
+        let laundryCharge = 0;
+        let linenRentalCharge = 0;
+        
+        if (includeLinens) {
+          laundryCharge += twin * PRICING.beds.twin.laundry;
+          laundryCharge += full * PRICING.beds.full.laundry;
+          laundryCharge += queen * PRICING.beds.queen.laundry;
+          laundryCharge += king * PRICING.beds.king.laundry;
+          laundryCharge += bathroom * PRICING.bathroomLinensLaundry;
+          laundryCharge += maxOccupancy * PRICING.bathTowelLaundry;
+          laundryCharge += kitchen * PRICING.kitchenLinensLaundry;
+          
+          linenRentalCharge += twin * PRICING.beds.twin.rental;
+          linenRentalCharge += full * PRICING.beds.full.rental;
+          linenRentalCharge += queen * PRICING.beds.queen.rental;
+          linenRentalCharge += king * PRICING.beds.king.rental;
+          linenRentalCharge += bathroom * PRICING.bathroomLinensRental;
+          linenRentalCharge += maxOccupancy * PRICING.bathTowelRental;
+          linenRentalCharge += kitchen * PRICING.kitchenLinensRental;
+        }
+        
+        const totalCharge = laborCharge + laundryCharge + supplyCharge + linenRentalCharge;
+        const chargePerSqFt = squareFoot > 0 ? totalCharge / squareFoot : 0;
+        
+        return {
+          laborCharge,
+          laundryCharge,
+          supplyCharge,
+          linenRentalCharge,
+          totalCharge,
+          chargePerSqFt
+        };
+      }, [inputs, includeLinens]);
+
+      const formatCurrency = (value) => {
+        return new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: 'USD',
+          minimumFractionDigits: 2
+        }).format(value);
+      };
+
+      const inputStyle = {
+        width: '100%',
+        padding: '0.5rem 0.75rem',
+        border: '1px solid #d1d5db',
+        borderRadius: '0.5rem',
+        outline: 'none',
+        transition: 'all 0.2s'
+      };
+
+      return (
+        <div className="min-h-screen p-4 md:p-8" style={{background: 'linear-gradient(to bottom right, #f0f9ff, #e0f2fe)'}}>
+          <div className="max-w-6xl mx-auto">
+            <div style={{background: `linear-gradient(to right, ${COLORS.secondary}, ${COLORS.secondary})`}} className="rounded-t-2xl p-6 md:p-8 text-white shadow-lg">
+              <div className="flex flex-col md:flex-row items-center md:items-start gap-4">
+                <div className="flex-shrink-0 bg-white rounded-lg p-2" style={{width: '80px', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                  <div style={{width: '100%', height: '100%', background: `url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="50" font-size="40" fill="${COLORS.primary}">TDCT</text></svg>')`, backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center'}}></div>
+                </div>
+                <div className="text-center md:text-left">
+                  <h1 className="text-3xl md:text-4xl font-bold mb-1">
+                    The Dream Clean Team
+                  </h1>
+                  <p className="text-sm opacity-90 mb-2">
+                    Clean You Can Trust!
+                  </p>
+                  <p className="text-blue-100 text-base md:text-lg">
+                    Vacation Rental Cleaning Price Calculator
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-b-2xl shadow-xl p-6 md:p-8">
+              <div className="grid md:grid-cols-2 gap-8">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-800 mb-6 pb-2 border-b-2" style={{borderColor: COLORS.primary}}>
+                    Property Details
+                  </h2>
+                  
+                  <div className="mb-6">
+                    <h3 className="font-semibold text-gray-700 mb-3 flex items-center">
+                      <svg className="w-5 h-5 mr-2" style={{color: COLORS.primary}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                      </svg>
+                      Bed Configuration
+                    </h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      {['twin', 'full', 'queen', 'king'].map(bedType => (
+                        <div key={bedType}>
+                          <label className="block text-sm font-medium text-gray-600 mb-1 capitalize">
+                            {bedType} Beds
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={inputs[bedType] || ''}
+                            onChange={(e) => handleInputChange(bedType, e.target.value)}
+                            style={inputStyle}
+                            onFocus={(e) => e.target.style.borderColor = COLORS.primary}
+                            onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mb-6">
+                    <h3 className="font-semibold text-gray-700 mb-3 flex items-center">
+                      <svg className="w-5 h-5 mr-2" style={{color: COLORS.primary}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
+                      Property Features
+                    </h3>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-600 mb-1">
+                          Bathrooms
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={inputs.bathroom || ''}
+                          onChange={(e) => handleInputChange('bathroom', e.target.value)}
+                          style={inputStyle}
+                          onFocus={(e) => e.target.style.borderColor = COLORS.primary}
+                          onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-600 mb-1">
+                          Kitchens
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={inputs.kitchen || ''}
+                          onChange={(e) => handleInputChange('kitchen', e.target.value)}
+                          style={inputStyle}
+                          onFocus={(e) => e.target.style.borderColor = COLORS.primary}
+                          onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-600 mb-1">
+                          Square Feet
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={inputs.squareFoot || ''}
+                          onChange={(e) => handleInputChange('squareFoot', e.target.value)}
+                          style={inputStyle}
+                          onFocus={(e) => e.target.style.borderColor = COLORS.primary}
+                          onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-600 mb-1">
+                          Max Occupancy
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={inputs.maxOccupancy || ''}
+                          onChange={(e) => handleInputChange('maxOccupancy', e.target.value)}
+                          style={inputStyle}
+                          onFocus={(e) => e.target.style.borderColor = COLORS.primary}
+                          onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mb-6">
+                    <h3 className="font-semibold text-gray-700 mb-3 flex items-center">
+                      <svg className="w-5 h-5 mr-2" style={{color: COLORS.primary}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                      </svg>
+                      Service Options
+                    </h3>
+                    <div>
+                      <label className="flex items-center cursor-pointer bg-gray-50 p-3 rounded-lg hover:bg-gray-100 transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={includeLinens}
+                          onChange={(e) => setIncludeLinens(e.target.checked)}
+                          className="w-4 h-4 border-gray-300 rounded focus:ring-2"
+                          style={{accentColor: COLORS.primary}}
+                        />
+                        <span className="ml-3 text-sm font-medium text-gray-700">
+                          Include Linen Rental & Laundry Service
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-800 mb-6 pb-2 border-b-2" style={{borderColor: COLORS.primary}}>
+                    Your Price Quote
+                  </h2>
+
+                  <div className="rounded-xl p-6 mb-6 text-white shadow-lg" style={{background: `linear-gradient(to bottom right, ${COLORS.primary}, ${COLORS.secondary})`}}>
+                    <p className="text-sm font-medium opacity-90 mb-1">Total Per Turnover</p>
+                    <p className="text-5xl font-bold mb-2">
+                      {formatCurrency(calculations.totalCharge)}
+                    </p>
+                    <p className="text-sm opacity-90">
+                      Professional cleaning with quality guarantee
+                    </p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="bg-gray-50 rounded-lg p-4 border-l-4" style={{borderColor: COLORS.primary}}>
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold text-gray-700">Labor & Cleaning</span>
+                        <span className="text-lg font-bold text-gray-900">
+                          {formatCurrency(calculations.laborCharge)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="bg-gray-50 rounded-lg p-4 border-l-4" style={{borderColor: COLORS.primary}}>
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold text-gray-700">Laundry Service</span>
+                        <span className="text-lg font-bold text-gray-900">
+                          {formatCurrency(calculations.laundryCharge)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="bg-gray-50 rounded-lg p-4 border-l-4" style={{borderColor: COLORS.primary}}>
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold text-gray-700">Cleaning Supplies</span>
+                        <span className="text-lg font-bold text-gray-900">
+                          {formatCurrency(calculations.supplyCharge)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {includeLinens && (
+                      <div className="bg-gray-50 rounded-lg p-4 border-l-4" style={{borderColor: COLORS.primary}}>
+                        <div className="flex justify-between items-center">
+                          <span className="font-semibold text-gray-700">Linen Rental Service</span>
+                          <span className="text-lg font-bold text-gray-900">
+                            {formatCurrency(calculations.linenRentalCharge)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="rounded-lg p-4 mt-4 border-2" style={{backgroundColor: `${COLORS.primary}1a`, borderColor: COLORS.primary}}>
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold" style={{color: COLORS.secondary}}>Price per Square Foot</span>
+                        <span className="text-lg font-bold" style={{color: COLORS.secondary}}>
+                          {formatCurrency(calculations.chargePerSqFt)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 p-4 rounded-lg border" style={{backgroundColor: `${COLORS.primary}1a`, borderColor: COLORS.primary}}>
+                    <p className="text-sm text-gray-700 mb-3">
+                      Ready to get started with automated, professional vacation rental cleaning?
+                    </p>
+                    <button className="w-full text-white font-semibold py-3 px-6 rounded-lg transition-all shadow-md hover:shadow-lg hover:scale-[1.02]" style={{backgroundColor: COLORS.primary}}>
+                      Book Your Cleaning
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-8 pt-6 border-t border-gray-200 text-center">
+                <p className="text-sm text-gray-600">
+                  <span className="font-semibold">5,000+ 5-Star Reviews</span> • Same-Day Turnovers • 100% Satisfaction Guarantee
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.render(<PricingCalculator />, document.getElementById('root'));
+  </script>
+</body>
+</html>
